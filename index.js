@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require('dotenv').config()
 const port = process.env.PORT || 5000;
 
@@ -67,6 +67,24 @@ app.get('/services', async(req, res) => {
     }
 })
 
+// get specific service data 
+app.get('/services/:id', async(req, res) => {
+    try {
+        const { id } = req.params;
+        const query = { _id: ObjectId(id) };
+        const service = await serviceConnection.findOne(query);
+        res.send({
+            success: true,
+            message: `Successfully get the service ${service.service_name}`,
+            data: service
+        })
+    } catch (error) {
+        res.send({
+            success: false,
+            error: error.message
+        })
+    }
+})
 
 
 

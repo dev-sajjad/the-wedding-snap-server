@@ -13,7 +13,7 @@ app.use(express.json())
 
 const uri =
     `mongodb+srv://${process.env.WEDDING_SNAP_USER}:${process.env.WEDDING_SNAP_PASS}@cluster0.ozga6sm.mongodb.net/?retryWrites=true&w=majority`;
-  
+ 
 const client = new MongoClient(uri);
 
 
@@ -28,8 +28,9 @@ async function dbConnect() {
 dbConnect();
 
 const serviceConnection = client.db('weddingSnap').collection('services')
+const reviewCollection = client.db('weddingSnap').collection('reviews')
 
-
+//services
 // get limited services from database
 app.get('/', async(req, res) => {
     try {
@@ -88,8 +89,47 @@ app.get('/services/:id', async(req, res) => {
 
 
 
+// reviews
+// get specific service related reviews
+app.get('/reviews/:id', async(req, res) => {
+    try {
+        const {id } = req.params;
+        const filter= { service_id:id }
+        const cursor = reviewCollection.find(filter).limit(4)
+        const reviews = await cursor.toArray();
+        res.send({
+            success: true,
+            message: 'Successfully get customer reviews!',
+            data: reviews
+        })
+    } catch (error) {
+        res.send({
+            success: false,
+            message: error.message
+        })
+    }
+})
+
+// post service related review
+app.post('/reviews', async(req, res) => {
+    try {
+        const review = req.body;
+        const result = await reviewCollection.insertOne(review)
+        res.send({
+            success: true,
+            message: 'Successfully add a review!',
+            data: result
+        })
+    } catch (error) {
+        res.send({
+            success: false,
+            message: error.message
+        })
+    }
+})
 
 
-app.listen(port, (req, res) => {
+
+app.listen(port, () => {
     console.log(`Wedding snap server is running on port: ${port}`)
 })

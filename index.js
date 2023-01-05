@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { MongoClient, ObjectId } = require("mongodb");
 require('dotenv').config()
 const port = process.env.PORT || 5000;
 
@@ -13,7 +13,6 @@ app.use(express.json())
 
 const uri =
     `mongodb+srv://${process.env.WEDDING_SNAP_USER}:${process.env.WEDDING_SNAP_PASS}@cluster0.ozga6sm.mongodb.net/?retryWrites=true&w=majority`;
- 
 const client = new MongoClient(uri);
 
 
@@ -22,12 +21,13 @@ async function dbConnect() {
         await client.connect();
         console.log('Database connected')
     } catch (error) {
-        console.log(error)
+        console.log(error.message)
     }
 }
 dbConnect();
 
-const serviceConnection = client.db('weddingSnap').collection('services')
+// database collections
+const serviceCollection = client.db('weddingSnap').collection('services')
 const reviewCollection = client.db('weddingSnap').collection('reviews')
 
 //services
@@ -35,7 +35,7 @@ const reviewCollection = client.db('weddingSnap').collection('reviews')
 app.get('/', async(req, res) => {
     try {
         const query = {};
-        const cursor = serviceConnection.find(query).limit(3)
+        const cursor = serviceCollection.find(query).limit(3)
         const services = await cursor.toArray();
         res.send({
             success: true,
@@ -53,7 +53,7 @@ app.get('/', async(req, res) => {
 // get all services data
 app.get('/services', async(req, res) => {
     try {
-        const cursor = serviceConnection.find({});
+        const cursor = serviceCollection.find({});
         const services = await cursor.toArray();
         res.send({
             success: true,
@@ -68,12 +68,31 @@ app.get('/services', async(req, res) => {
     }
 })
 
+// post service data to database 
+app.post('/services', async (req, res) => {
+    try {
+        const service = req.body;
+        const result = await serviceCollection.insertOne(service)
+        res.send({
+            success: true,
+            message: 'Successfully added a post!',
+            data: result
+        })
+    } catch (error) {
+        res.send({
+            success: false,
+            message: error.message
+        })
+    }
+})
+
+
 // get specific service data 
 app.get('/services/:id', async(req, res) => {
     try {
         const { id } = req.params;
         const query = { _id: ObjectId(id) };
-        const service = await serviceConnection.findOne(query);
+        const service = await serviceCollection.findOne(query);
         res.send({
             success: true,
             message: `Successfully get the service ${service.service_name}`,
@@ -88,14 +107,13 @@ app.get('/services/:id', async(req, res) => {
 })
 
 
-
 // reviews
 // get specific service related reviews
 app.get('/reviews/:id', async(req, res) => {
     try {
         const {id } = req.params;
         const filter= { service_id:id }
-        const cursor = reviewCollection.find(filter).limit(4)
+        const cursor = reviewCollection.find(filter)
         const reviews = await cursor.toArray();
         res.send({
             success: true,
@@ -117,7 +135,7 @@ app.post('/reviews', async(req, res) => {
         const result = await reviewCollection.insertOne(review)
         res.send({
             success: true,
-            message: 'Successfully add a review!',
+            message: 'Successfully added a review!',
             data: result
         })
     } catch (error) {
@@ -128,6 +146,27 @@ app.post('/reviews', async(req, res) => {
     }
 })
 
+//get user specific reviews
+app.get('/reviews', async (req, res) => {
+    try {
+        const { email } = req.query;
+        const filter = { email: email };
+        const cursor = reviewCollection.find(filter)
+        const myReview = await cursor.toArray();
+        res.send({
+            success: true,
+            message: "Successfully loaded all reviews!",
+            data: myReview
+        })   
+    } catch (error) {
+        res.send({
+            success: false,
+            message: error.message
+        })
+    }
+    
+    
+})
 
 
 app.listen(port, () => {
